@@ -9,6 +9,9 @@
           Class: CS 6963 - Functional Programming
      Assignment: Sudoku
 
+     You can simply run this program to see it solve the example
+     Sudoku boards as well as see it generate boards as well.
+
      Tip: Use a small window when running the program so the
      board prints out nicely as output is not prettified by
      this program.
@@ -277,3 +280,14 @@
 (generateSudokuBoard)
 (displayln "\nGenerate Sudoku Board:")
 (generateSudokuBoard)
+
+(displayln "")
+
+(displayln "Generate and Solve:\n")
+
+(define generatedBoard (generateSudokuBoard))
+
+(displayln "Generated Board:")
+generatedBoard
+(displayln "\nSolved Generated Board:")
+(solve generatedBoard 0 0 '() 1)
