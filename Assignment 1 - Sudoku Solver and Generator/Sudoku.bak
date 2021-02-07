@@ -1,0 +1,51 @@
+#lang typed/racket
+
+#|
+         Author: Braeden Diaz
+          Class: CS 6963 - Functional Programming
+     Assignment: Sudoku
+|#
+
+(define exampleGrid #(#(5 3 0 0 7 0 0 0 0)
+                      #(6 0 0 1 9 5 0 0 0)
+                      #(0 9 8 0 0 0 0 6 0)
+                      #(8 0 0 0 6 0 0 0 3)
+                      #(4 0 0 8 0 3 0 0 1)
+                      #(7 0 0 0 2 0 0 0 6)
+                      #(0 6 0 0 0 0 2 8 0)
+                      #(0 0 0 4 1 9 0 0 5)
+                      #(0 0 0 0 8 0 0 7 9)))
+
+
+(struct Cell
+  ([n : Number]
+   [values : (Listof Number)]))
+
+(define printType x
+  (case x
+    [(Cell n values) (diplay "n")]))
+
+#|
+(define (possible x y n)
+  (for ([i grid])
+    (for ([j i])
+      (print j))))
+|#
+
+#|
+(cond
+      [(equal? (list-ref i x) n)
+        #f]
+      [(equal? (list-ref i y) n)
+       #f])
+|#
+
+#|(define (foo)
+  (for/list ([i grid])
+    (for/list ([j i])
+      j)))
+
+(build-list 9 (lambda (x)
+                (build-list 4 (lambda (y) 0))))
+
+(foo)|#
