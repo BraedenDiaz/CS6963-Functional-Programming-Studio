@@ -31,7 +31,9 @@
 ; Deserialize the JSON players into a list of player struct representations
 (define (create-players json-players)
   (map (lambda (player-spaces)
-         (player player-spaces))
+         (let* ([card (hash-ref player-spaces 'card)]
+                [tokens (hash-ref player-spaces 'tokens)])
+           (player card tokens)))
        json-players))
 
 ; Deserialize the JSON spaces into a list of row struct representations
