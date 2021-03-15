@@ -17,7 +17,9 @@
          get-valid-build-spaces
          move-player-token
          build-at-space
-         increment-turn)
+         increment-turn
+         get-token-level
+         get-8-spaces-levels)
 
 ; A board is a (board list-of-players list-of-rows number)
 (struct board (players rows turn))
@@ -143,7 +145,7 @@
                    (let * ([level (car level-space)]
                            [space (cdr level-space)])
                      (cond
-                       ; Make sure the current move space is within the bounds of the token and
+                       ; Make sure the current build space is within the bounds of the token and
                        ; doesn't already contain other tokens and is not a level 4 space.
                        [(and (and (and (> level -1)
                                        (equal? (member space opponent-player-tokens) #f))
