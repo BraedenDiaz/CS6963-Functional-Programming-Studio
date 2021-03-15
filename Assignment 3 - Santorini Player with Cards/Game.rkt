@@ -54,7 +54,7 @@
       [else #f])))
 
 ; Apply card action to the random strategy
-(define (perform-action-of card original-board selected-token)
+(define (perform-action-of card original-board selected-token valid-move-spaces selected-move-space moved-board valid-build-spaces selected-build-space build-board)
   (case card
     [(Apollo) (let* ([valid-move-spaces (apollo original-board selected-token)]
                      [selected-move-space (list-ref valid-move-spaces (random 0 (length valid-move-spaces)))]
@@ -63,44 +63,23 @@
                      [selected-build-space (list-ref valid-build-spaces (random 0 (length valid-build-spaces)))]
                      [build-board (build-at-space moved-board selected-build-space)])
                 build-board)]
-    [(Artemis) (let* ([valid-move-spaces (get-valid-move-spaces original-board selected-token)]
-                      [selected-move-space (list-ref valid-move-spaces (random 0 (length valid-move-spaces)))]
-                      [moved-board (move-player-token original-board selected-token selected-move-space)]
-                      [valid-move-spaces2 (artemis moved-board selected-token)]
+    [(Artemis) (let* ([valid-move-spaces2 (artemis moved-board selected-token)]
                       [selected-move-space2 (list-ref valid-move-spaces2 (random 0 (length valid-move-spaces2)))]
                       [moved-board2 (move-player-token moved-board selected-token selected-move-space2)]
                       [valid-build-spaces (get-valid-build-spaces moved-board2 selected-move-space2)]
                       [selected-build-space (list-ref valid-build-spaces (random 0 (length valid-build-spaces)))]
                       [build-board (build-at-space moved-board2 selected-build-space)])
                  build-board)]
-    [(Atlas) (let* ([valid-move-spaces (get-valid-move-spaces original-board selected-token)]
-                    [selected-move-space (list-ref valid-move-spaces (random 0 (length valid-move-spaces)))]
-                    [moved-board (move-player-token original-board selected-token selected-move-space)]
-                    [valid-build-spaces (get-valid-build-spaces moved-board selected-move-space)]
-                    [selected-build-space (list-ref valid-build-spaces (random 0 (length valid-build-spaces)))]
-                    [build-board (atlas moved-board selected-build-space)])
+    [(Atlas) (let* ([build-board (atlas moved-board selected-build-space)])
                build-board)]
-    [(Demeter) (let* ([valid-move-spaces (get-valid-move-spaces original-board selected-token)]
-                      [selected-move-space (list-ref valid-move-spaces (random 0 (length valid-move-spaces)))]
-                      [moved-board (move-player-token original-board selected-token selected-move-space)]
-                      [valid-build-spaces (get-valid-build-spaces moved-board selected-move-space)]
-                      [selected-build-space (list-ref valid-build-spaces (random 0 (length valid-build-spaces)))]
-                      [build-board (build-at-space moved-board selected-build-space)]
-                      [selected-build-space2 (list-ref (dementer build-board selected-token selected-build-space)
+    [(Demeter) (let* ([selected-build-space2 (list-ref (dementer build-board selected-token selected-build-space)
                                                        (random 0 (length valid-build-spaces)))]
                       [build-board2 (build-at-space moved-board selected-build-space2)])
                  build-board2)]
-    [(Hephastus) (let* ([valid-move-spaces (get-valid-move-spaces original-board selected-token)]
-                      [selected-move-space (list-ref valid-move-spaces (random 0 (length valid-move-spaces)))]
-                      [moved-board (move-player-token original-board selected-token selected-move-space)]
-                      [valid-build-spaces (get-valid-build-spaces moved-board selected-move-space)]
-                      [selected-build-space (list-ref valid-build-spaces (random 0 (length valid-build-spaces)))]
-                      [build-board (build-at-space moved-board selected-build-space)]
-                      [build-board2 (hephastus build-board selected-token selected-build-space)])
+    [(Hephastus) (let* ([build-board2 (hephastus build-board selected-token selected-build-space)])
                    build-board2)]
     [(Minotaur) 0]
-    [(Pan) (let* ([valid-move-spaces (get-valid-move-spaces original-board selected-token)]
-                  [valid-pan-spaces (pan original-board selected-token)])
+    [(Pan) (let* ([valid-pan-spaces (pan original-board selected-token)])
              (if (> (length valid-pan-spaces) 1)
                  #t
                  (let* ([selected-move-space (list-ref valid-move-spaces (random 0 (length valid-move-spaces)))]
@@ -140,7 +119,7 @@
          [valid-build-spaces (get-valid-build-spaces moved-board selected-move-space)]
          [selected-build-space (list-ref valid-build-spaces (random 0 (length valid-build-spaces)))]
          [build-board (build-at-space moved-board selected-build-space)]
-         [card-board (perform-action-of card board selected-token)]
+         [card-board (perform-action-of card board selected-token valid-move-spaces selected-move-space moved-board valid-build-spaces selected-build-space build-board)]
          [final-board build-board])
     (cond
       [(equal? (winning-move moved-board) #t) (increment-turn moved-board)] ; If the move was a winning move, return the moved-board

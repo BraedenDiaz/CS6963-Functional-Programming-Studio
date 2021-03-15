@@ -67,7 +67,7 @@
     [else build-board]))
 
 (define (minotaur board token-pos)
-  0)
+  (display "TODO"))
 
 ; Returns a list of valid winning spaces to move down two or more levels to.
 (define (pan board token-pos)

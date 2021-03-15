@@ -21,6 +21,13 @@
          get-token-level
          get-8-spaces-levels)
 
+(define INVALID-LEVEL -1)
+(define MAX-LEVEL 4)
+(define MIN-ROW 1)
+(define MAX-ROW 5)
+(define MIN-COL 1)
+(define MAX-COL 5)
+
 ; A board is a (board list-of-players list-of-rows number)
 (struct board (players rows turn))
 
@@ -37,12 +44,12 @@
 ; Get the level for the space at row col on board
 (define (get-space-level board row col)
   (cond
-    [(and (and (>= row 1) (<= row 5))
-          (and (>= col 1) (<= col 5)))
+    [(and (and (>= row MIN-ROW) (<= row MAX-ROW))
+          (and (>= col MIN-COL) (<= col MAX-COL)))
      (list-ref (row-levels
                 (get-board-row board row))
                (- col 1))]
-    [else -1]))
+    [else INVALID-LEVEL]))
 
 ; Get the level of the space for a specific token position
 (define (get-token-level board token-pos)
@@ -128,8 +135,8 @@
                                                 (<= level token-level))
                                             (equal? (member space opponent-player-tokens) #f))
                                        (equal? (member space current-player-tokens) #f))
-                                  (< level 4))
-                                  (> level -1)) #t]
+                                  (< level MAX-LEVEL))
+                                  (> level INVALID-LEVEL)) #t]
                        [else #f])))
                  (get-8-spaces-levels board token-pos)))))
 
@@ -147,9 +154,9 @@
                      (cond
                        ; Make sure the current build space is within the bounds of the token and
                        ; doesn't already contain other tokens and is not a level 4 space.
-                       [(and (and (and (> level -1)
+                       [(and (and (and (> level INVALID-LEVEL)
                                        (equal? (member space opponent-player-tokens) #f))
                                   (equal? (member space current-player-tokens) #f))
-                             (< level 4)) #t]
+                             (< level MAX-LEVEL)) #t]
                        [else #f])))
                  (get-8-spaces-levels board token-pos)))))
