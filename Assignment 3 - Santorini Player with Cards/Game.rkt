@@ -143,7 +143,7 @@
          [card-board (perform-action-of card board selected-token)]
          [final-board build-board])
     (cond
-      [(equal? (winning-move moved-board) #t) (increment-turn +)] ; If the move was a winning move, return the moved-board
+      [(equal? (winning-move moved-board) #t) (increment-turn moved-board)] ; If the move was a winning move, return the moved-board
       [(= (length valid-move-spaces) 0) (exit 0)] ; If there are no valid moves, simply exit
       [else (if (= (random 0 2) 0)
                 (increment-turn final-board)
