@@ -19,7 +19,9 @@
          build-at-space
          increment-turn
          get-token-level
-         get-8-spaces-levels)
+         get-8-spaces-levels
+         apollo-swap
+         move-player-token-minotaur)
 
 (define INVALID-LEVEL -1)
 (define MAX-LEVEL 4)
@@ -68,6 +70,50 @@
                                                                 tokeni))])
                               playeri))]))
 
+; After making an apollo move, if the token ended up in the same space as
+; an opponent token, then move that opponent token to the player token's
+; old space.
+(define (apollo-swap current-board old-space new-space)
+  (let* ([opponent-tokens (player-tokens (list-ref (board-players current-board) 1))])
+    (if (member new-space opponent-tokens)
+        (struct-copy board current-board
+                     [players (for/list ([i (in-naturals 1)]
+                                         [playeri (board-players current-board)])
+                                (if (equal? i 2)
+                                    (struct-copy player playeri
+                                                 [tokens (for/list ([i (in-naturals 1)]
+                                                                    [tokeni (player-tokens playeri)])
+                                                           (if (equal? tokeni new-space)
+                                                               old-space
+                                                               tokeni))])
+                                    playeri))])
+        current-board)))
+
+; Move a player token to a new position which may also occupy an opponent position
+; If the player does try to move to an opponent position, this function will attempt
+; to push back the opponent token to any random valid space. Otherwise, this function
+; will force the player token to a new random position.
+(define (move-player-token-minotaur current-board selected-token-pos new-space)
+  (let* ([opponent-tokens (player-tokens (list-ref (board-players current-board) 1))]
+         [valid-opponent-move-spaces (get-valid-move-spaces current-board new-space)]
+         [valid-opponent-move-spaces-length (length valid-opponent-move-spaces)])
+    (if (member new-space opponent-tokens)
+        (if (> valid-opponent-move-spaces-length 0)
+            (let* ([opponent-pushed-board (struct-copy board current-board
+                                                       [players (for/list ([i (in-naturals 1)]
+                                                                           [playeri (board-players current-board)])
+                                                                  (if (equal? i 2)
+                                                                      (struct-copy player playeri
+                                                                                   [tokens (for/list ([i (in-naturals 1)]
+                                                                                                      [tokeni (player-tokens playeri)])
+                                                                                             (if (equal? tokeni new-space)
+                                                                                                 (list-ref valid-opponent-move-spaces (random 0 valid-opponent-move-spaces-length))
+                                                                                                 tokeni))])
+                                                                      playeri))])])
+              (move-player-token opponent-pushed-board selected-token-pos new-space))
+            #f)
+        (move-player-token current-board selected-token-pos new-space))))
+
 (define (build-at-space current-board build-pos)
   (let* ([build-pos-row (list-ref build-pos 0)]
          [build-pos-col (list-ref build-pos 1)])
@@ -109,14 +155,14 @@
          [space6-level (get-space-level board (list-ref space6 0) (list-ref space6 1))]
          [space7-level (get-space-level board (list-ref space7 0) (list-ref space7 1))]
          [space8-level (get-space-level board (list-ref space8 0) (list-ref space8 1))])
-    (append (list (cons space1-level space1))
-            (append (list (cons space2-level space2))
-                    (append (list (cons space3-level space3))
-                            (append (list (cons space4-level space4))
-                                    (append (list (cons space5-level space5))
-                                            (append (list (cons space6-level space6))
-                                                    (append (list (cons space7-level space7))
-                                                            (list (cons space8-level space8)))))))))))
+    (list (cons space1-level space1)
+          (cons space2-level space2)
+          (cons space3-level space3)
+          (cons space4-level space4)
+          (cons space5-level space5)
+          (cons space6-level space6)
+          (cons space7-level space7)
+          (cons space8-level space8))))
 
 ; Returns a list of all the valid move spaces for a specific token
 (define (get-valid-move-spaces board token-pos)
