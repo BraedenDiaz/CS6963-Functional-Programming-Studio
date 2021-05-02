@@ -15,11 +15,26 @@
 (define main-socket (udp-open-socket))
 (define receive-socket (udp-open-socket))
 
+; Bind the sockets to the machines IP and a port
+; The port for the receive-socket is the only one that
+; needs to be known in order for other nodes to know where
+; to send messages to.
+(udp-bind! main-socket "127.0.0.1" 0)
+(udp-bind! receive-socket "127.0.0.1" 12000)
+
 ; Simple power function
 (define (pow base power)
   (foldl * 1
          (build-list power (lambda (_)
                              base))))
+
+; -------------------------------------- DHT Storage ----------------------------------------- ;
+
+; An empty immutable hash table to start out the DHT storage data structure
+(define DHT (make-immutable-hash))
+
+(define (dht-store dht key value)
+  (hash-set dht key value))
 
 ; -------------------------------------- Routing Table ----------------------------------------- ;
 
@@ -135,17 +150,6 @@
 (define (bootstrap ThisNode BootstrapNode)
   (send-message-to BootstrapNode (serialize "FIND_NODE" ThisNode "")))
 
-; Get a list of peers from the Kademlia network that contain a
-; value (content) associated with the provided key.
-(define (get-content key callback)
-  (display "TODO"))
-
-; Put the provided key into the Distributed Hash Table which means that
-; this node contains the value (content) for the provided key and lets
-; the other KadNodes in the network know of this fact.
-(define (put-content key)
-  (display "TODO"))
-
 ; Stop communicating with other KadNodes and disconnect this KadNode from
 ; the Kademlia network.
 (define (disconnect)
@@ -158,7 +162,7 @@
 (define (generate-guid ip port)
   (let ([ip-bytes (string->bytes/utf-8 ip)]
         [port-bytes (string->bytes/utf-8 (number->string port))])
-    (sha256 (bytes-append ip-bytes port-bytes))))
+    (bytes->hex-string (sha256 (bytes-append ip-bytes port-bytes)))))
 
 ; Return the logical xor distance between two KadNode's GUIDs
 (define (distance guid1 guid2)
@@ -223,11 +227,15 @@
          [sender-KadNode (create-node (first sender-node-info-list)
                                       (second sender-node-info-list)
                                       (third sender-node-info-list))]
-         [old-routing-table (car items)]
-         [remember-list (cdr items)]
-         [new-routing-table (routing-table-insert old-routing-table ThisNode sender-KadNode
-                                                  (k-index (distance (KadNode-guid ThisNode)
-                                                                     (KadNode-guid sender-KadNode))))])
+         [old-routing-table (first items)]
+         [dht (second items)]
+         [remember-list (third items)]
+         [new-routing-table (cond
+                              [(>= (KadNode-guid sender-KadNode) 0)
+                               (routing-table-insert old-routing-table ThisNode sender-KadNode
+                                                     (k-index (distance (KadNode-guid ThisNode)
+                                                                        (KadNode-guid sender-KadNode))))]
+                              [else old-routing-table])])
     (display "\nOld Routing Table:\n")
     (print-routing-table old-routing-table)
     (display "\n")
@@ -237,15 +245,53 @@
     (case type
       [(PING) (display "PING")
               (send-message-to sender-KadNode (serialize "PING_REPLY" ThisNode ""))
-              (cons new-routing-table remember-list)]
-      [(STORE)     (cons new-routing-table remember-list)]
+              (list new-routing-table dht remember-list)]
+      ; Put the provided key into the Distributed Hash Table which means that
+      ; this node contains the value (content) for the provided key and lets
+      ; the other KadNodes in the network know of this fact.
+      [(CLIENT_STORE) (let* ([content-key (bytes->hex-string (sha256 (string->bytes/utf-8 buffer)))]
+                             [updated-dht (dht-store dht content-key buffer)])
+                        (for-each (lambda (bucket)
+                                    (cond
+                                      [(not (empty? bucket))
+                                       (send-message-to (first bucket) (serialize "STORE" ThisNode content-key))]))
+                                  new-routing-table)
+                        (send-message-to sender-KadNode (serialize "STORE_REPLY" ThisNode content-key))
+                        (list new-routing-table updated-dht remember-list))]
+      [(STORE)     (let* ([content-key buffer]
+                          [updated-dht (dht-store dht content-key sender-KadNode)])
+                     (list new-routing-table updated-dht remember-list))]
       [(FIND_NODE) (send-message-to sender-KadNode (serialize "FIND_NODE_REPLY"
                                                               ThisNode
                                                               (node-lookup ThisNode sender-KadNode old-routing-table)))
-                   (cons new-routing-table remember-list)]
-      [(FIND_VALUE)     (cons new-routing-table remember-list)]
+                   (list new-routing-table dht remember-list)]
+      [(FIND_VALUE)     (let* ([content-key buffer])
+                          (cond
+                            [(hash-has-key? dht content-key)
+                             (let ([content-value (hash-ref dht content-key)])
+                               (cond
+                                 [(string? content-value) (send-message-to sender-KadNode (serialize "FIND_VALUE_REPLY"
+                                                                                                     ThisNode
+                                                                                                     content-value))]
+                                 [else (send-message-to sender-KadNode (serialize "FIND_VALUE_REPLY"
+                                                                                  ThisNode
+                                                                                  (list content-key
+                                                                                        (KadNode-guid content-value)
+                                                                                        (KadNode-ip content-value)
+                                                                                        (KadNode-port content-value))))]))]
+                            [else (let ([routing-table-flat-list (map (lambda (bucket)
+                                                                        (list (KadNode-guid (first bucket))
+                                                                              (KadNode-ip (first bucket))
+                                                                              (KadNode-port (first bucket))))
+                                                                      new-routing-table)])
+                                    (send-message-to sender-KadNode (serialize "FIND_VALUE_REPLY"
+                                                                               ThisNode
+                                                                               (append
+                                                                                (list content-key)
+                                                                                routing-table-flat-list))))])
+                          (list new-routing-table dht remember-list))]
       [(PING_REPLY) (display "Got Reply to Ping\n")
-                    (cons new-routing-table remember-list)]
+                    (list new-routing-table dht remember-list)]
       [(FIND_NODE_REPLY) (display "Got FIND_NODE_REPLY\n")
                          (display "Buffer:\n")
                          (display buffer)
@@ -260,9 +306,29 @@
                               (for-each (lambda (node)
                                           (send-message-to node (serialize "FIND_NODE" ThisNode "")))
                                         buffer-k-nodes)])
-                           (cons new-routing-table (append remember-list (map (lambda (list-item)
-                                                                                (first list-item))
-                                                                              buffer-minus-remembered))))])))
+                           (list new-routing-table dht (append remember-list (map (lambda (list-item)
+                                                                                    (first list-item))
+                                                                                  buffer-minus-remembered))))]
+      [(FIND_VALUE_REPLY) (cond
+                            [(string? buffer) (send-message-to sender-KadNode (serialize "CONTENT"
+                                                                                         ThisNode
+                                                                                         buffer))
+                                              (list new-routing-table dht remember-list)]
+                            [(list? buffer)
+                             (let* ([content-key (first buffer)]
+                                    [buffer-minus-content-key (rest buffer)]
+                                    [buffer-minus-remembered (filter (lambda (list-item)
+                                                                       (equal? (member (first list-item) remember-list) #f))
+                                                                     buffer)]
+                                    [buffer-k-nodes (map (lambda (list-item)
+                                                           (KadNode (first list-item) (second list-item) (third list-item)))
+                                                         buffer-minus-remembered)])
+                               (for-each (lambda (node)
+                                           (send-message-to node (serialize "FIND_VALUE" ThisNode content-key)))
+                                         buffer-k-nodes)
+                               (list new-routing-table dht (append remember-list (map (lambda (list-item)
+                                                                                        (first list-item))
+                                                                                      buffer-minus-remembered))))])])))
 
 ; -------------------------------------- Serialization ----------------------------------------- ;
 
@@ -275,13 +341,6 @@
   (bytes->jsexpr message))
 
 ; -------------------------------------- Networking -------------------------------------------- ;
-
-; Bind the sockets to the machines IP and a port
-; The port for the receive-socket is the only one that
-; needs to be known in order for other nodes to know where
-; to send messages to.
-(udp-bind! main-socket "127.0.0.1" 0)
-(udp-bind! receive-socket "127.0.0.1" 12000)
 
 ; Send a message to the selected KadNode
 (define (send-message-to kad-node json-bytes)
@@ -309,10 +368,10 @@
     (let ([BOOTSTRAP-NODE (create-node (generate-guid "127.0.0.1" 12000) "127.0.0.1" 12000)]
           [This-Node (create-node custom-guid ip port)])
       (if is-bootstrap-node
-          (thread (listen-for-messages This-Node (cons ROUTING-TABLE '())))
+          (listen-for-messages This-Node (list ROUTING-TABLE DHT '()))
           (let ([remember-list (list 0)])
             (bootstrap This-Node BOOTSTRAP-NODE)
-            (thread (listen-for-messages This-Node (cons ROUTING-TABLE remember-list))))))))
+            (thread (listen-for-messages This-Node (list ROUTING-TABLE DHT remember-list))))))))
 
 ; (start #t #f)
 
