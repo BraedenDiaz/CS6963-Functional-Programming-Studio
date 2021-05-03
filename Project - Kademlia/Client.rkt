@@ -14,14 +14,14 @@
 ; needs to be known in order for other nodes to know where
 ; to send messages to.
 (udp-bind! main-socket "127.0.0.1" 0)
-(udp-bind! receive-socket "127.0.0.1" 10000)
+(udp-bind! receive-socket "127.0.0.1" 10001)
 
 (define (process-message message-jsexpr)
   (let* ([type (string->symbol (hash-ref message-jsexpr 'type))]
          [sender-node-info-list (hash-ref message-jsexpr 'kadnode)]
          [buffer (hash-ref message-jsexpr 'buffer)])
     (case type
-      [(CONTENT FIND_VALUE_REPLY) (display "Got Content:\n")
+      [(FIND_VALUE_REPLY) (display "Got Content:\n")
                  (display (string-append buffer "\n"))]
       [(STORE_REPLY) (display "Successfully stored content:\n")
                      (display (string-append (string-append "Node: " (number->string (first sender-node-info-list))) "\n"))
@@ -61,7 +61,7 @@
 (define listen-thread (thread listen-for-messages))
 
 (define (put-content ip port content)
-  (udp-send-to main-socket ip port (serialize "CLIENT_STORE" (KadNode -1 "127.0.0.1" 10000) content)))
+  (udp-send-to main-socket ip port (serialize "CLIENT_STORE" (KadNode -1 "127.0.0.1" 10001) content)))
 
 (define (get-content ip port content-key)
-  (udp-send-to main-socket ip port (serialize "FIND_VALUE" (KadNode -1 "127.0.0.1" 10000) content-key)))
+  (udp-send-to main-socket ip port (serialize "FIND_VALUE" (KadNode -1 "127.0.0.1" 10001) content-key)))

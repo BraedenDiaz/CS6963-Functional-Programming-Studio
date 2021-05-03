@@ -3,6 +3,7 @@
 (require racket/udp)
 (require sha)
 (require json)
+(require racket/cmdline) ; For command-line arguments	
 
 ; Represents a Kademlia node with a given guid (256-bit), ip address (string), and port number (Number)
 (struct KadNode (guid ip port))
@@ -19,8 +20,8 @@
 ; The port for the receive-socket is the only one that
 ; needs to be known in order for other nodes to know where
 ; to send messages to.
-(udp-bind! main-socket "127.0.0.1" 0)
-(udp-bind! receive-socket "127.0.0.1" 12000)
+(udp-bind! main-socket #f 0)
+(udp-bind! receive-socket #f 15008)
 
 ; Simple power function
 (define (pow base power)
@@ -59,6 +60,8 @@
          (bitwise-xor (KadNode-guid KadNode) d))
        (k-distances)))
 
+; Check if our routing table is complete in that it contains
+; all of our optimal reference nodes.
 (define (routing-table-complete? ThisNode routing-table)
   (if (routing-table-empty? routing-table)
       #f
@@ -88,6 +91,9 @@
                                            routing-table
                                            k-index) (list NewKadNode))))
 
+; Replace the entry in the appropriate k-bucket. This is typically done when we find
+; either our reference node or a node closer to the reference node than the one already
+; in the bucket.
 (define (routing-table-replace routing-table k-index NewKadNode)
   (routing-table-add (list-set routing-table k-index (remove (first (list-ref routing-table k-index))
                                                              (list-ref routing-table k-index)))
@@ -101,12 +107,15 @@
         k-index-node
         #f)))
 
+; Check if the routing table is empty by checking each bucket
 (define (routing-table-empty? routing-table)
   (equal? (member #f
                   (map (lambda (bucket)
                          (empty? bucket))
                        routing-table)) #f))
 
+; Display the routing table in a readable form. E.g. a list of GUIDs instead of
+; a list of KadNode struct types.
 (define (print-routing-table routing-table)
   (if (routing-table-empty? routing-table)
       (display routing-table)
@@ -117,6 +126,7 @@
                     routing-table))))
   
 ; Check if a k-bucket has less than or equal to K nodes
+; For full Kademlia protocol implementation, decided not to go that route
 #|
 (define (k-bucket-less-than-K k-index routing-table)
   (<= (length (list-ref routing-table k-index) K)))
@@ -142,7 +152,8 @@
              (cond
                [(< new-node-to-ref-distance existing-node-to-ref-distance)
                 (routing-table-replace routing-table k-index NewKadNode)]
-               [else routing-table]))]))))
+               [else routing-table]))]
+          [else routing-table]))))
 
 ; -------------------------------------- Protocol ----------------------------------------- ;
 
@@ -197,6 +208,7 @@
                          routing-table)))
         k-closest-nodes)))
 
+; For full Kademlia protocol implementation, decided not to go that route
 #|
 
     (if (< (length (list-ref routing-table k-index)) ALPHA)
@@ -219,7 +231,11 @@
           (lambda (x y)
             (< (second x) (second y))))))
 
-; Process an RPC message that was sent to ThisNode
+; Process an RPC message that was sent to ThisNode.
+;
+; Note that this will process messages apart of the Kadmelia
+; protocol as well as messages from P2P clients trying to
+; store and/or access content or trying to manage ThisNode.
 (define (process-message ThisNode message-jsexpr items)
   (let* ([type (string->symbol (hash-ref message-jsexpr 'type))]
          [sender-node-info-list (hash-ref message-jsexpr 'kadnode)]
@@ -230,6 +246,8 @@
          [old-routing-table (first items)]
          [dht (second items)]
          [remember-list (third items)]
+         [reply-node (fourth items)]
+         [got-content-reply (fifth items)]
          [new-routing-table (cond
                               [(>= (KadNode-guid sender-KadNode) 0)
                                (routing-table-insert old-routing-table ThisNode sender-KadNode
@@ -245,7 +263,7 @@
     (case type
       [(PING) (display "PING")
               (send-message-to sender-KadNode (serialize "PING_REPLY" ThisNode ""))
-              (list new-routing-table dht remember-list)]
+              (list new-routing-table dht remember-list reply-node #f)]
       ; Put the provided key into the Distributed Hash Table which means that
       ; this node contains the value (content) for the provided key and lets
       ; the other KadNodes in the network know of this fact.
@@ -257,14 +275,14 @@
                                        (send-message-to (first bucket) (serialize "STORE" ThisNode content-key))]))
                                   new-routing-table)
                         (send-message-to sender-KadNode (serialize "STORE_REPLY" ThisNode content-key))
-                        (list new-routing-table updated-dht remember-list))]
+                        (list new-routing-table updated-dht remember-list reply-node #f))]
       [(STORE)     (let* ([content-key buffer]
                           [updated-dht (dht-store dht content-key sender-KadNode)])
-                     (list new-routing-table updated-dht remember-list))]
+                     (list new-routing-table updated-dht remember-list reply-node #f))]
       [(FIND_NODE) (send-message-to sender-KadNode (serialize "FIND_NODE_REPLY"
                                                               ThisNode
                                                               (node-lookup ThisNode sender-KadNode old-routing-table)))
-                   (list new-routing-table dht remember-list)]
+                   (list new-routing-table dht remember-list reply-node #f)]
       [(FIND_VALUE)     (let* ([content-key buffer])
                           (cond
                             [(hash-has-key? dht content-key)
@@ -272,26 +290,21 @@
                                (cond
                                  [(string? content-value) (send-message-to sender-KadNode (serialize "FIND_VALUE_REPLY"
                                                                                                      ThisNode
-                                                                                                     content-value))]
-                                 [else (send-message-to sender-KadNode (serialize "FIND_VALUE_REPLY"
-                                                                                  ThisNode
-                                                                                  (list content-key
-                                                                                        (KadNode-guid content-value)
-                                                                                        (KadNode-ip content-value)
-                                                                                        (KadNode-port content-value))))]))]
-                            [else (let ([routing-table-flat-list (map (lambda (bucket)
-                                                                        (list (KadNode-guid (first bucket))
-                                                                              (KadNode-ip (first bucket))
-                                                                              (KadNode-port (first bucket))))
-                                                                      new-routing-table)])
-                                    (send-message-to sender-KadNode (serialize "FIND_VALUE_REPLY"
-                                                                               ThisNode
-                                                                               (append
-                                                                                (list content-key)
-                                                                                routing-table-flat-list))))])
-                          (list new-routing-table dht remember-list))]
+                                                                                                     content-value))
+                                                          (list new-routing-table dht remember-list reply-node #f)]
+                                 [else (send-message-to content-value (serialize "FIND_VALUE"
+                                                                                 ThisNode
+                                                                                 content-key))
+                                       (list new-routing-table dht remember-list sender-KadNode #f)]))]
+                            [else (let* ([routing-table-minus-sender (remove sender-KadNode new-routing-table)])
+                                    (for-each (lambda (bucket)
+                                                (send-message-to (first bucket) (serialize "FIND_VALUE"
+                                                                                           ThisNode
+                                                                                           content-key)))
+                                              routing-table-minus-sender)
+                                    (list new-routing-table dht remember-list sender-KadNode #f))]))]
       [(PING_REPLY) (display "Got Reply to Ping\n")
-                    (list new-routing-table dht remember-list)]
+                    (list new-routing-table dht remember-list reply-node #f)]
       [(FIND_NODE_REPLY) (display "Got FIND_NODE_REPLY\n")
                          (display "Buffer:\n")
                          (display buffer)
@@ -308,27 +321,12 @@
                                         buffer-k-nodes)])
                            (list new-routing-table dht (append remember-list (map (lambda (list-item)
                                                                                     (first list-item))
-                                                                                  buffer-minus-remembered))))]
+                                                                                  buffer-minus-remembered)) reply-node #f))]
       [(FIND_VALUE_REPLY) (cond
-                            [(string? buffer) (send-message-to sender-KadNode (serialize "CONTENT"
-                                                                                         ThisNode
-                                                                                         buffer))
-                                              (list new-routing-table dht remember-list)]
-                            [(list? buffer)
-                             (let* ([content-key (first buffer)]
-                                    [buffer-minus-content-key (rest buffer)]
-                                    [buffer-minus-remembered (filter (lambda (list-item)
-                                                                       (equal? (member (first list-item) remember-list) #f))
-                                                                     buffer)]
-                                    [buffer-k-nodes (map (lambda (list-item)
-                                                           (KadNode (first list-item) (second list-item) (third list-item)))
-                                                         buffer-minus-remembered)])
-                               (for-each (lambda (node)
-                                           (send-message-to node (serialize "FIND_VALUE" ThisNode content-key)))
-                                         buffer-k-nodes)
-                               (list new-routing-table dht (append remember-list (map (lambda (list-item)
-                                                                                        (first list-item))
-                                                                                      buffer-minus-remembered))))])])))
+                            [(equal? got-content-reply #f) (send-message-to reply-node (serialize "FIND_VALUE_REPLY"
+                                                                                                  ThisNode
+                                                                                                  buffer))
+                                                           (list new-routing-table dht remember-list reply-node #t)])])))
 
 ; -------------------------------------- Serialization ----------------------------------------- ;
 
@@ -363,15 +361,51 @@
 
 ; -------------------------------------- Startup -------------------------------------------- ;
 
-(define (start is-bootstrap-node custom-guid)
-  (let-values ([(ip port otherIP otherPort) (udp-addresses receive-socket #t)])
-    (let ([BOOTSTRAP-NODE (create-node (generate-guid "127.0.0.1" 12000) "127.0.0.1" 12000)]
-          [This-Node (create-node custom-guid ip port)])
-      (if is-bootstrap-node
-          (listen-for-messages This-Node (list ROUTING-TABLE DHT '()))
-          (let ([remember-list (list 0)])
-            (bootstrap This-Node BOOTSTRAP-NODE)
-            (thread (listen-for-messages This-Node (list ROUTING-TABLE DHT remember-list))))))))
+; Function that starts the node and begins the Kademlia protocol
+(define (start is-bootstrap-node BOOTSTRAP-NODE ThisNode)
+  (if is-bootstrap-node
+      (listen-for-messages ThisNode (list ROUTING-TABLE DHT '() #f #f))
+      (let ([remember-list (list 0)])
+        (bootstrap ThisNode BOOTSTRAP-NODE)
+        (listen-for-messages ThisNode (list ROUTING-TABLE DHT remember-list #f #f)))))
 
-; (start #t #f)
+; Helps parse configuration entries
+(define (parse-config-entry entry-line)
+  (second (string-split (string-trim entry-line))))
 
+; Get the configuration file as a command-line argument
+(define (get-config-file-arg)
+  (command-line
+   #:args (config-filename)
+   config-filename))
+
+; Main fuction where the program begins
+; It reads in the appropriate configuration parameters from the "config.txt"
+; textfile and starts the Kademlia node.
+(define (main config-file)
+  (define config-file-input (open-input-file config-file))
+  (let ([is-bootstrap-node-str (parse-config-entry (read-line config-file-input))]
+        [use-custom-guid-str (parse-config-entry (read-line config-file-input))]
+        [custom-guid-str (parse-config-entry (read-line config-file-input))]
+        [bootstrap-ip-str (parse-config-entry (read-line config-file-input))]
+        [bootstrap-port-str (parse-config-entry (read-line config-file-input))])
+    (let-values ([(ip port remoteIP remotePort) (udp-addresses receive-socket #t)])
+      (let* ([is-bootstrap-node (equal? is-bootstrap-node-str "yes")]
+             [use-custom-guid (equal? use-custom-guid-str "yes")]
+             [custom-guid (string->number custom-guid-str)]
+             [bootstrap-ip bootstrap-ip-str]
+             [bootstrap-port (string->number bootstrap-port-str)]
+             [ThisNode (if use-custom-guid
+                           (create-node custom-guid ip port)
+                           (create-node (generate-guid ip port) ip port))]
+             [BOOTSTRAP-NODE (if is-bootstrap-node
+                                 ThisNode
+                                 (create-node -1 bootstrap-ip bootstrap-port))])
+        ;(start is-bootstrap-node BOOTSTRAP-NODE ThisNode)
+        (display bootstrap-port)))
+    (udp-close receive-socket)
+    (udp-close main-socket)))
+
+; Run main with the first command-line argument which should be the
+; name of the configuration file.
+(main (get-config-file-arg))

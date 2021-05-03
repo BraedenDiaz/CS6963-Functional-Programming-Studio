@@ -1,0 +1,5 @@
+is-bootstrap-node: yes
+  use-custom-guid: yes
+      custom-guid: 0
+     bootstrap-ip: 127.0.0.1
+   bootstrap-port: 15008
