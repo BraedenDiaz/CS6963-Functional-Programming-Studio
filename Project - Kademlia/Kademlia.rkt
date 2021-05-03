@@ -91,6 +91,11 @@
                                            routing-table
                                            k-index) (list NewKadNode))))
 
+; Remove the node at the k-index (k-bucket) from the routing table
+(define (routing-table-remove routing-table k-index)
+  (list-set routing-table k-index (remove (first (list-ref routing-table k-index))
+                                          (list-ref routing-table k-index))))
+
 ; Replace the entry in the appropriate k-bucket. This is typically done when we find
 ; either our reference node or a node closer to the reference node than the one already
 ; in the bucket.
@@ -163,9 +168,15 @@
 
 ; Stop communicating with other KadNodes and disconnect this KadNode from
 ; the Kademlia network.
-(define (disconnect)
+(define (disconnect ThisNode routing-table)
+  (for-each (lambda (bucket)
+              (cond
+                [(not (empty? bucket))
+                 (send-message-to (first bucket) (serialize "NODE_DISCONNECT" ThisNode ""))]))
+            routing-table)
   (udp-close main-socket)
-  (udp-close receive-socket))
+  (udp-close receive-socket)
+  (exit 0))
 
 ; -------------------------------------- Node Funcs ----------------------------------------- ;
 
@@ -243,11 +254,11 @@
          [sender-KadNode (create-node (first sender-node-info-list)
                                       (second sender-node-info-list)
                                       (third sender-node-info-list))]
-         [old-routing-table (first items)]
-         [dht (second items)]
-         [remember-list (third items)]
-         [reply-node (fourth items)]
-         [got-content-reply (fifth items)]
+         [old-routing-table (first items)] ; Keep track of the old routing table before the newly added entry
+         [dht (second items)] ; Keep track of our DHT
+         [remember-list (third items)] ; For remembering nodes we already contacted when bulding the network
+         [reply-node (fourth items)] ; For constructing a reply chain when retrieving content from the network
+         [got-content-reply (fifth items)] ; For ignoring other replies if we already got the content we requested
          [new-routing-table (cond
                               [(>= (KadNode-guid sender-KadNode) 0)
                                (routing-table-insert old-routing-table ThisNode sender-KadNode
@@ -264,6 +275,23 @@
       [(PING) (display "PING")
               (send-message-to sender-KadNode (serialize "PING_REPLY" ThisNode ""))
               (list new-routing-table dht remember-list reply-node #f)]
+      [(CLIENT_GET_RT) (let ([routing-table-flat-list (if (routing-table-empty? new-routing-table)
+                                                          new-routing-table
+                                                          (map (lambda (bucket)
+                                                                 (if (empty? bucket)
+                                                                     bucket
+                                                                     (list (KadNode-guid (first bucket)) (KadNode-ip (first bucket)) (KadNode-port (first bucket)))))
+                                                               new-routing-table))])
+                         (send-message-to sender-KadNode (serialize "RT_REPLY" ThisNode routing-table-flat-list))
+                         (list new-routing-table dht remember-list reply-node #f))]
+      [(CLIENT_GET_DHT) (send-message-to sender-KadNode (serialize "DHT_REPLY" ThisNode dht))
+                        (list new-routing-table dht remember-list reply-node #f)]
+      [(SHUTDOWN) (disconnect ThisNode new-routing-table)
+                  (list new-routing-table dht remember-list reply-node #f)]
+      [(NODE_DISCONNECT) (let ([updated-routing-table (routing-table-remove new-routing-table (k-index (distance
+                                                                                                        (KadNode-guid ThisNode)
+                                                                                                        (KadNode-guid sender-KadNode))))])
+                           (list updated-routing-table dht remember-list reply-node #f))]
       ; Put the provided key into the Distributed Hash Table which means that
       ; this node contains the value (content) for the provided key and lets
       ; the other KadNodes in the network know of this fact.

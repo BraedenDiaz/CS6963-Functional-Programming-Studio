@@ -19,13 +19,22 @@
 (define (process-message message-jsexpr)
   (let* ([type (string->symbol (hash-ref message-jsexpr 'type))]
          [sender-node-info-list (hash-ref message-jsexpr 'kadnode)]
-         [buffer (hash-ref message-jsexpr 'buffer)])
+         [buffer (hash-ref message-jsexpr 'buffer)]
+         [node-id-str (number->string (first sender-node-info-list))])
     (case type
       [(FIND_VALUE_REPLY) (display "Got Content:\n")
                  (display (string-append buffer "\n"))]
       [(STORE_REPLY) (display "Successfully stored content:\n")
-                     (display (string-append (string-append "Node: " (number->string (first sender-node-info-list))) "\n"))
-                     (display (string-append (string-append "Key: " buffer) "\n"))])))
+                     (display (string-append (string-append "Node: " node-id-str) "\n"))
+                     (display (string-append (string-append "Key: " buffer) "\n"))]
+      [(RT_REPLY) (if (empty? buffer)
+                      (display (string-append buffer "\n"))
+                      (display (map (lambda (node-info-list)
+                                      (first node-info-list))
+                                    buffer)))]
+      [(DHT_REPLY) (display (string-append (string-append "DHT for Node " node-id-str) ":"))
+                   (display buffer)
+                   (display "\n")])))
 
 ; -------------------------------------- Serialization ----------------------------------------- ;
 
@@ -60,8 +69,20 @@
 
 (define listen-thread (thread listen-for-messages))
 
+(define ClientKadNode (KadNode -1 "127.0.0.1" 10001))
+
 (define (put-content ip port content)
-  (udp-send-to main-socket ip port (serialize "CLIENT_STORE" (KadNode -1 "127.0.0.1" 10001) content)))
+  (udp-send-to main-socket ip port (serialize "CLIENT_STORE" ClientKadNode content)))
 
 (define (get-content ip port content-key)
-  (udp-send-to main-socket ip port (serialize "FIND_VALUE" (KadNode -1 "127.0.0.1" 10001) content-key)))
+  (udp-send-to main-socket ip port (serialize "FIND_VALUE" ClientKadNode content-key)))
+
+(define (get-routing-table ip port)
+  (udp-send-to main-socket ip port (serialize "CLIENT_GET_RT" ClientKadNode "")))
+
+(define (get-dht ip port)
+  (udp-send-to main-socket ip port (serialize "CLIENT_GET_DHT" ClientKadNode "")))
+
+(define (shutdown-node ip port)
+  (udp-send-to main-socket ip port (serialize "SHUTDOWN" ClientKadNode ""))
+  (display "[*] Shutdown command sent."))
