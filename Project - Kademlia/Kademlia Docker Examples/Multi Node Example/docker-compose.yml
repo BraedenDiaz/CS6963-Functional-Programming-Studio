@@ -1,0 +1,725 @@
+# Author: Braeden Diaz
+# CS6480
+# Lab 1
+
+version: "3.8"
+
+services:
+  node0:
+    container_name: node0
+    build:
+      context: .
+      dockerfile: ./nodes/node0/Dockerfile
+    stdin_open: true # docker run -i
+    tty: true        # docker run -t
+    privileged: true # docker run --privileged
+
+    networks:
+      node0Net:
+        ipv4_address: 172.24.0.2
+      node1Net:
+      node2Net:
+      node3Net:
+      node4Net:
+      node5Net:
+      node6Net:
+      node7Net:
+      node8Net:
+      node9Net:
+      node10Net:
+      node11Net:
+      node12Net:
+      node13Net:
+      node14Net:
+      node15Net:
+      clientnet:
+
+  node1:
+    container_name: node1
+    build:
+      context: .
+      dockerfile: ./nodes/node1/Dockerfile
+    stdin_open: true
+    tty: true
+    privileged: true
+    
+    depends_on:
+      - node0
+
+    networks:
+      - node0Net
+      - node1Net
+      - node2Net
+      - node3Net
+      - node4Net
+      - node5Net
+      - node6Net
+      - node7Net
+      - node8Net
+      - node9Net
+      - node10Net
+      - node11Net
+      - node12Net
+      - node13Net
+      - node14Net
+      - node15Net
+      - clientnet
+
+  node2:
+    container_name: node2
+    build:
+      context: .
+      dockerfile: ./nodes/node2/Dockerfile
+    stdin_open: true
+    tty: true
+    privileged: true
+    
+    depends_on:
+      - node0
+      - node1
+
+    networks:
+      - node0Net
+      - node1Net
+      - node2Net
+      - node3Net
+      - node4Net
+      - node5Net
+      - node6Net
+      - node7Net
+      - node8Net
+      - node9Net
+      - node10Net
+      - node11Net
+      - node12Net
+      - node13Net
+      - node14Net
+      - node15Net
+      - clientnet
+
+  node3:
+    container_name: node3
+    build:
+      context: .
+      dockerfile: ./nodes/node3/Dockerfile
+    stdin_open: true
+    tty: true
+    privileged: true
+    
+    depends_on:
+      - node0
+      - node1
+      - node2
+    
+    networks:
+      - node0Net
+      - node1Net
+      - node2Net
+      - node3Net
+      - node4Net
+      - node5Net
+      - node6Net
+      - node7Net
+      - node8Net
+      - node9Net
+      - node10Net
+      - node11Net
+      - node12Net
+      - node13Net
+      - node14Net
+      - node15Net
+      - clientnet
+    
+  node4:
+    container_name: node4
+    build:
+      context: .
+      dockerfile: ./nodes/node4/Dockerfile
+    stdin_open: true
+    tty: true
+    privileged: true
+    
+    depends_on:
+      - node0
+      - node1
+      - node2
+      - node3
+    
+    networks:
+      - node0Net
+      - node1Net
+      - node2Net
+      - node3Net
+      - node4Net
+      - node5Net
+      - node6Net
+      - node7Net
+      - node8Net
+      - node9Net
+      - node10Net
+      - node11Net
+      - node12Net
+      - node13Net
+      - node14Net
+      - node15Net
+      - clientnet
+      
+  node5:
+    container_name: node5
+    build:
+      context: .
+      dockerfile: ./nodes/node5/Dockerfile
+    stdin_open: true
+    tty: true
+    privileged: true
+    
+    depends_on:
+      - node0
+      - node1
+      - node2
+      - node3
+      - node4
+    
+    networks:
+      - node0Net
+      - node1Net
+      - node2Net
+      - node3Net
+      - node4Net
+      - node5Net
+      - node6Net
+      - node7Net
+      - node8Net
+      - node9Net
+      - node10Net
+      - node11Net
+      - node12Net
+      - node13Net
+      - node14Net
+      - node15Net
+      - clientnet
+      
+  node6:
+    container_name: node6
+    build:
+      context: .
+      dockerfile: ./nodes/node6/Dockerfile
+    stdin_open: true
+    tty: true
+    privileged: true
+    
+    depends_on:
+      - node0
+      - node1
+      - node2
+      - node3
+      - node4
+      - node5
+    
+    networks:
+      - node0Net
+      - node1Net
+      - node2Net
+      - node3Net
+      - node4Net
+      - node5Net
+      - node6Net
+      - node7Net
+      - node8Net
+      - node9Net
+      - node10Net
+      - node11Net
+      - node12Net
+      - node13Net
+      - node14Net
+      - node15Net
+      - clientnet
+      
+  node7:
+    container_name: node7
+    build:
+      context: .
+      dockerfile: ./nodes/node7/Dockerfile
+    stdin_open: true
+    tty: true
+    privileged: true
+    
+    depends_on:
+      - node0
+      - node1
+      - node2
+      - node3
+      - node4
+      - node5
+      - node6
+    
+    networks:
+      - node0Net
+      - node1Net
+      - node2Net
+      - node3Net
+      - node4Net
+      - node5Net
+      - node6Net
+      - node7Net
+      - node8Net
+      - node9Net
+      - node10Net
+      - node11Net
+      - node12Net
+      - node13Net
+      - node14Net
+      - node15Net
+      - clientnet
+      
+  node8:
+    container_name: node8
+    build:
+      context: .
+      dockerfile: ./nodes/node8/Dockerfile
+    stdin_open: true
+    tty: true
+    privileged: true
+    
+    depends_on:
+      - node0
+      - node1
+      - node2
+      - node3
+      - node4
+      - node5
+      - node6
+      - node7
+    
+    networks:
+      - node0Net
+      - node1Net
+      - node2Net
+      - node3Net
+      - node4Net
+      - node5Net
+      - node6Net
+      - node7Net
+      - node8Net
+      - node9Net
+      - node10Net
+      - node11Net
+      - node12Net
+      - node13Net
+      - node14Net
+      - node15Net
+      - clientnet
+      
+  node9:
+    container_name: node9
+    build:
+      context: .
+      dockerfile: ./nodes/node9/Dockerfile
+    stdin_open: true
+    tty: true
+    privileged: true
+    
+    depends_on:
+      - node0
+      - node1
+      - node2
+      - node3
+      - node4
+      - node5
+      - node6
+      - node7
+      - node8
+    
+    networks:
+      - node0Net
+      - node1Net
+      - node2Net
+      - node3Net
+      - node4Net
+      - node5Net
+      - node6Net
+      - node7Net
+      - node8Net
+      - node9Net
+      - node10Net
+      - node11Net
+      - node12Net
+      - node13Net
+      - node14Net
+      - node15Net
+      - clientnet
+      
+  node10:
+    container_name: node10
+    build:
+      context: .
+      dockerfile: ./nodes/node10/Dockerfile
+    stdin_open: true
+    tty: true
+    privileged: true
+    
+    depends_on:
+      - node0
+      - node1
+      - node2
+      - node3
+      - node4
+      - node5
+      - node6
+      - node7
+      - node8
+      - node9
+    
+    networks:
+      - node0Net
+      - node1Net
+      - node2Net
+      - node3Net
+      - node4Net
+      - node5Net
+      - node6Net
+      - node7Net
+      - node8Net
+      - node9Net
+      - node10Net
+      - node11Net
+      - node12Net
+      - node13Net
+      - node14Net
+      - node15Net
+      - clientnet
+     
+  node11:
+    container_name: node11
+    build:
+      context: .
+      dockerfile: ./nodes/node11/Dockerfile
+    stdin_open: true
+    tty: true
+    privileged: true
+    
+    depends_on:
+      - node0
+      - node1
+      - node2
+      - node3
+      - node4
+      - node5
+      - node6
+      - node7
+      - node8
+      - node9
+      - node10
+    
+    networks:
+      - node0Net
+      - node1Net
+      - node2Net
+      - node3Net
+      - node4Net
+      - node5Net
+      - node6Net
+      - node7Net
+      - node8Net
+      - node9Net
+      - node10Net
+      - node11Net
+      - node12Net
+      - node13Net
+      - node14Net
+      - node15Net
+      - clientnet
+  
+  node12:
+    container_name: node12
+    build:
+      context: .
+      dockerfile: ./nodes/node12/Dockerfile
+    stdin_open: true
+    tty: true
+    privileged: true
+    
+    depends_on:
+      - node0
+      - node1
+      - node2
+      - node3
+      - node4
+      - node5
+      - node6
+      - node7
+      - node8
+      - node9
+      - node10
+      - node11
+    
+    networks:
+      - node0Net
+      - node1Net
+      - node2Net
+      - node3Net
+      - node4Net
+      - node5Net
+      - node6Net
+      - node7Net
+      - node8Net
+      - node9Net
+      - node10Net
+      - node11Net
+      - node12Net
+      - node13Net
+      - node14Net
+      - node15Net
+      - clientnet
+  
+  node13:
+    container_name: node13
+    build:
+      context: .
+      dockerfile: ./nodes/node13/Dockerfile
+    stdin_open: true
+    tty: true
+    privileged: true
+    
+    depends_on:
+      - node0
+      - node1
+      - node2
+      - node3
+      - node4
+      - node5
+      - node6
+      - node7
+      - node8
+      - node9
+      - node10
+      - node11
+      - node12
+    
+    networks:
+      - node0Net
+      - node1Net
+      - node2Net
+      - node3Net
+      - node4Net
+      - node5Net
+      - node6Net
+      - node7Net
+      - node8Net
+      - node9Net
+      - node10Net
+      - node11Net
+      - node12Net
+      - node13Net
+      - node14Net
+      - node15Net
+      - clientnet
+  
+  node14:
+    container_name: node14
+    build:
+      context: .
+      dockerfile: ./nodes/node14/Dockerfile
+    stdin_open: true
+    tty: true
+    privileged: true
+    
+    depends_on:
+      - node0
+      - node1
+      - node2
+      - node3
+      - node4
+      - node5
+      - node6
+      - node7
+      - node8
+      - node9
+      - node10
+      - node11
+      - node12
+      - node13
+    
+    networks:
+      - node0Net
+      - node1Net
+      - node2Net
+      - node3Net
+      - node4Net
+      - node5Net
+      - node6Net
+      - node7Net
+      - node8Net
+      - node9Net
+      - node10Net
+      - node11Net
+      - node12Net
+      - node13Net
+      - node14Net
+      - node15Net
+      - clientnet
+  
+  node15:
+    container_name: node15
+    build:
+      context: .
+      dockerfile: ./nodes/node15/Dockerfile
+    stdin_open: true
+    tty: true
+    privileged: true
+    
+    depends_on:
+      - node0
+      - node1
+      - node2
+      - node3
+      - node4
+      - node5
+      - node6
+      - node7
+      - node8
+      - node9
+      - node10
+      - node11
+      - node12
+      - node13
+      - node14
+    
+    networks:
+      - node0Net
+      - node1Net
+      - node2Net
+      - node3Net
+      - node4Net
+      - node5Net
+      - node6Net
+      - node7Net
+      - node8Net
+      - node9Net
+      - node10Net
+      - node11Net
+      - node12Net
+      - node13Net
+      - node14Net
+      - node15Net
+      - clientnet
+      
+  client:
+    container_name: client
+    build:
+      context: .
+      dockerfile: ./client/Dockerfile
+    stdin_open: true
+    tty: true
+    privileged: true
+    
+    depends_on:
+      - node0
+      - node1
+      - node2
+      - node3
+      - node4
+      - node5
+      - node6
+      - node7
+      - node8
+      - node9
+      - node10
+      - node11
+      - node12
+      - node13
+      - node14
+      - node15
+    
+    networks:
+      - clientnet
+      - node0Net
+      - node1Net
+      - node2Net
+      - node3Net
+      - node4Net
+      - node5Net
+      - node6Net
+      - node7Net
+      - node8Net
+      - node9Net
+      - node10Net
+      - node11Net
+      - node12Net
+      - node13Net
+      - node14Net
+      - node15Net
+    
+
+networks:
+  node0Net:
+    name: node_0_Net
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.24.0.0/16
+    
+  node1Net:
+    name: node_1_Net
+    driver: bridge
+
+  node2Net:
+    name: node_2_Net
+    driver: bridge
+        
+  node3Net:
+    name: node_3_Net
+    driver: bridge
+        
+  node4Net:
+    name: node_4_Net
+    driver: bridge
+
+  node5Net:
+    name: node_5_Net
+    driver: bridge
+    
+  node6Net:
+    name: node_6_Net
+    driver: bridge
+    
+  node7Net:
+    name: node_7_Net
+    driver: bridge
+    
+  node8Net:
+    name: node_8_Net
+    driver: bridge
+    
+  node9Net:
+    name: node_9_Net
+    driver: bridge
+    
+  node10Net:
+    name: node_10_Net
+    driver: bridge
+    
+  node11Net:
+    name: node_11_Net
+    driver: bridge
+    
+  node12Net:
+    name: node_12_Net
+    driver: bridge
+  
+  node13Net:
+    name: node_13_Net
+    driver: bridge
+    
+  node14Net:
+    name: node_14_Net
+    driver: bridge
+    
+  node15Net:
+    name: node_15_Net
+    driver: bridge
+  
+  clientnet:
+    name: client-net
+    driver: bridge

@@ -489,7 +489,7 @@
              ; Select an ip based on whether we're on Windows or a unix-based system
              [ip-to-use (if (empty? (get-ipv4-addrs))
                             "127.0.0.1" ; Windows
-                            (second (get-ipv4-addrs)))]
+                            (first (get-ipv4-addrs)))]
              [use-custom-guid (equal? use-custom-guid-str "yes")]
              [custom-guid (string->number custom-guid-str)]
              [bootstrap-ip bootstrap-ip-str]
