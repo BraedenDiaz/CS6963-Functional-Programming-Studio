@@ -4,7 +4,7 @@ Project for CS6963 at the University of Utah.
 
 ### YouTube Video
 
-[![CS6963 Project | Kademlia by Braeden Diaz](http://img.youtube.com/vi/xTpqyHf0bdw/0.jpg)](http://www.youtube.com/watch?v=xTpqyHf0bdw "CS6963 Project | Kademlia by Braeden Diaz")
+[![CS6963 Project | Kademlia by Braeden Diaz](http://img.youtube.com/vi/y9SX-Le7ui8/0.jpg)](https://youtu.be/y9SX-Le7ui8 "CS6963 Project | Kademlia by Braeden Diaz")
 
 ## Docker Examples Note
 
